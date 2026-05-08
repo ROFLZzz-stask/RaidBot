@@ -22,7 +22,7 @@ CONFIG = {
 }
 
 BLOCKED_GUILDS = [
-    # 123456789012345678,
+    1501595797123371068 #замените на свой
 ]
 
 intents = discord.Intents.default()

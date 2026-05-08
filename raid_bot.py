@@ -4,7 +4,10 @@ import asyncio
 import os
 import sys
 
-TOKEN_FILE = 'token.txt'
+TOKEN = os.environ.get("TOKEN")
+if not TOKEN:
+    print("[FATAL] Переменная окружения TOKEN не задана!")
+    sys.exit(1)
 
 CONFIG = {
     "channels_to_create": 350,

@@ -13,7 +13,7 @@ CONFIG = {
     "channels_to_create": 350,
     "spam_per_channel": 45,
     "channel_name": "nuked-by-raid",
-    "spam_message": "@everyone СЕРВЕР УНИЧТОЖЕН\nВсе каналы, роли и шаблоны удалены.",
+    "spam_message": "@everyone СЕРВЕР УНИЧТОЖЕН организацией TMW\nВсе каналы, роли и шаблоны удалены.\n https://discord.gg/wUY45xA8RF",
     "delay_delete": 0.25,
     "delay_create": 0.25,
     "delay_spam": 0.4,
